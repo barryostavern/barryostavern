@@ -1,51 +1,52 @@
-// User types
-export interface User {
+export interface Event {
   _id: string;
-  auth0Id: string;
-  email: string;
-  name: string;
-  picture?: string;
-  createdAt: string;
-  updatedAt: string;
+  type: 'sports' | 'holiday' | 'shuttle' | 'community';
+  title: string;
+  description: string;
+  date: string;
+  timeLabel: string;
 }
 
-// Item types
-export interface Item {
+export type EventType = Event['type'];
+
+export interface SiteSettings {
+  announcement: {
+    enabled: boolean;
+    message: string;
+    linkTarget: 'Events' | 'Christmas Party' | 'Menu' | 'Contact';
+  };
+  christmasParty: {
+    enabled: boolean;
+    title: string;
+    date?: string;
+    note: string;
+    ticketUrl: string;
+  };
+  hero: {
+    videoUrl?: string;
+    posterUrl?: string;
+  };
+  hours: Array<{ label: string; value: string; order: number }>;
+  contact: {
+    address: string;
+    phone: string;
+  };
+  about: string;
+  instagram: {
+    handle: string;
+    showApprovedInGallery: boolean;
+  };
+}
+
+export interface GallerySubmission {
   _id: string;
-  title: string;
-  description?: string;
-  completed: boolean;
-  user: string;
-  createdAt: string;
-  updatedAt: string;
+  submitterName: string;
+  caption: string;
+  imageUrl: string;
+  thumbnailUrl: string;
 }
 
-export interface CreateItemDto {
-  title: string;
-  description?: string;
-}
-
-export interface UpdateItemDto {
-  title?: string;
-  description?: string;
-  completed?: boolean;
-}
-
-// API Response types
-export interface ApiResponse<T> {
-  data: T;
-  message?: string;
-}
-
-export interface ApiError {
-  message: string;
-  status: number;
-}
-
-// Auth types
-export interface AuthState {
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  user: User | null;
-  token: string | null;
+export interface ApiListResponse<T> {
+  data: T[];
+  meta: { count: number };
 }

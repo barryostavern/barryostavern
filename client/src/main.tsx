@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Auth0Provider } from '@auth0/auth0-react';
 import App from './App';
+import './styles/tokens.css';
+import './styles/global.css';
+import './styles/components.css';
 import './styles/index.css';
 
 const domain = import.meta.env.VITE_AUTH0_DOMAIN;

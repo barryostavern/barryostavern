@@ -1,0 +1,74 @@
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(7, 10, 7, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0.875rem 1.5rem;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  line-height: 1.1;
+}
+
+.brandName {
+  font-size: 1.5rem;
+  color: var(--gold);
+}
+
+.brandSub {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.links a {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.links a:hover {
+  color: var(--green-bright);
+}
+
+@media (max-width: 560px) {
+  .links {
+    gap: 0.875rem;
+  }
+
+  .links a {
+    font-size: 0.6875rem;
+  }
+
+  .brandSub {
+    display: none;
+  }
+}

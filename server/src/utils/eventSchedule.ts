@@ -75,18 +75,21 @@ export function resolveScheduleType(event: EventScheduleFields): EventScheduleTy
 
 export function isWeeklyEventActive(event: EventScheduleFields, now = new Date()): boolean {
   if (resolveScheduleType(event) !== 'weekly') return false;
-  if (event.dayOfWeek === undefined || !event.endDate) return false;
+  if (event.dayOfWeek === undefined || !event.startDate || !event.endDate) return false;
+
+  return isWeeklyEventStarted(event, now) && !isWeeklySeasonEnded(event, now);
+}
+
+function isWeeklySeasonEnded(event: EventScheduleFields, now = new Date()): boolean {
+  if (!event.endDate) return true;
 
   const { startOfToday } = getTodayBounds(now);
   const endDate = new Date(event.endDate);
 
-  if (Number.isNaN(endDate.getTime())) return false;
+  if (Number.isNaN(endDate.getTime())) return true;
 
   endDate.setHours(23, 59, 59, 999);
-
-  // Visible through the end of the season so recurring items can populate the grid
-  // before their first occurrence (start date is informational for staff).
-  return endDate >= startOfToday;
+  return endDate < startOfToday;
 }
 
 export function isWeeklyEventStarted(event: EventScheduleFields, now = new Date()): boolean {
@@ -113,9 +116,11 @@ export function isDatedEventActive(event: EventScheduleFields, now = new Date())
 }
 
 export function isEventActive(event: EventScheduleFields, now = new Date()): boolean {
-  return resolveScheduleType(event) === 'weekly'
-    ? isWeeklyEventActive(event, now)
-    : isDatedEventActive(event, now);
+  if (resolveScheduleType(event) === 'weekly') {
+    return isWeeklyEventActive(event, now) && getWeeklyNextOccurrence(event, now) !== null;
+  }
+
+  return isDatedEventActive(event, now);
 }
 
 export function isEventPast(event: EventScheduleFields, now = new Date()): boolean {
@@ -133,7 +138,7 @@ export function isEventPast(event: EventScheduleFields, now = new Date()): boole
 }
 
 export function getActiveEventsFilter(now = new Date()) {
-  const { startOfToday } = getTodayBounds(now);
+  const { startOfToday, endOfToday } = getTodayBounds(now);
 
   return {
     $or: [
@@ -143,35 +148,84 @@ export function getActiveEventsFilter(now = new Date()) {
       },
       {
         scheduleType: 'weekly',
+        startDate: { $lte: endOfToday },
         endDate: { $gte: startOfToday },
       },
     ],
   };
 }
 
-function mondayFirstOrder(dayOfWeek: number): number {
-  return (dayOfWeek + 6) % 7;
+function normalizeCalendarDate(value: Date | string): Date {
+  const date = new Date(value);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-export function sortEventsForDisplay<T extends EventScheduleFields>(events: T[]): T[] {
+export function getWeeklyNextOccurrence(
+  event: EventScheduleFields,
+  now = new Date()
+): Date | null {
+  if (resolveScheduleType(event) !== 'weekly') return null;
+  if (event.dayOfWeek === undefined || !event.startDate || !event.endDate) return null;
+
+  const { startOfToday } = getTodayBounds(now);
+  const seasonStart = normalizeCalendarDate(event.startDate);
+  const seasonEnd = normalizeCalendarDate(event.endDate);
+  seasonEnd.setHours(23, 59, 59, 999);
+
+  const searchFrom =
+    startOfToday.getTime() > seasonStart.getTime() ? startOfToday : seasonStart;
+
+  const cursor = new Date(searchFrom);
+
+  for (let offset = 0; offset < 7; offset += 1) {
+    const candidate = new Date(cursor);
+    candidate.setDate(cursor.getDate() + offset);
+
+    if (candidate > seasonEnd) return null;
+    if (candidate.getDay() === event.dayOfWeek) return candidate;
+  }
+
+  return null;
+}
+
+export function getEventSortDate(event: EventScheduleFields, now = new Date()): Date | null {
+  if (resolveScheduleType(event) === 'weekly') {
+    return getWeeklyNextOccurrence(event, now);
+  }
+
+  if (!event.date) return null;
+
+  return normalizeCalendarDate(event.date);
+}
+
+export function sortEventsForDisplay<T extends EventScheduleFields>(
+  events: T[],
+  now = new Date()
+): T[] {
   return [...events].sort((a, b) => {
-    const aWeekly = resolveScheduleType(a) === 'weekly';
-    const bWeekly = resolveScheduleType(b) === 'weekly';
+    const aDate = getEventSortDate(a, now);
+    const bDate = getEventSortDate(b, now);
 
-    if (aWeekly !== bWeekly) {
-      return aWeekly ? 1 : -1;
+    if (!aDate && !bDate) return 0;
+    if (!aDate) return 1;
+    if (!bDate) return -1;
+
+    const dateDiff = aDate.getTime() - bDate.getTime();
+    if (dateDiff !== 0) return dateDiff;
+
+    if (resolveScheduleType(a) === 'weekly' && resolveScheduleType(b) === 'weekly') {
+      return (a.dayOfWeek ?? 0) - (b.dayOfWeek ?? 0);
     }
 
-    if (aWeekly && bWeekly) {
-      const dayDiff =
-        mondayFirstOrder(a.dayOfWeek ?? 0) - mondayFirstOrder(b.dayOfWeek ?? 0);
-      if (dayDiff !== 0) return dayDiff;
-
-      return new Date(a.startDate ?? 0).getTime() - new Date(b.startDate ?? 0).getTime();
-    }
-
-    return new Date(a.date ?? 0).getTime() - new Date(b.date ?? 0).getTime();
+    return 0;
   });
+}
+
+export function filterActiveEventsForDisplay<T extends EventScheduleFields>(
+  events: T[],
+  now = new Date()
+): T[] {
+  return events.filter((event) => isEventActive(event, now));
 }
 
 export function formatWeeklyDayLabel(dayOfWeek: number): string {

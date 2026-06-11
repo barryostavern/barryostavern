@@ -1,5 +1,8 @@
 import { getEventIconPath, usesColoredEventIcon } from '../../../constants/eventTypes';
-import { formatWeeklyDayLabel } from '../../../constants/eventSchedule';
+import {
+  formatSpecificDateLabel,
+  formatWeeklyDayLabel,
+} from '../../../constants/eventSchedule';
 import type { Event } from '../../../types';
 import styles from './EventCard.module.css';
 
@@ -9,14 +12,16 @@ export interface EventCardProps {
 
 function EventCard({ event }: EventCardProps) {
   const isWeekly = event.scheduleType === 'weekly' && event.dayOfWeek !== undefined;
+  const specificDate = !isWeekly ? formatSpecificDateLabel(event.date) : null;
   const iconPath = getEventIconPath(event.type);
   const coloredIcon = usesColoredEventIcon(event.type);
 
   return (
     <article className={styles.card}>
-      {isWeekly ? <p className={styles.day}>{formatWeeklyDayLabel(event.dayOfWeek!)}</p> : null}
+      {isWeekly ? <p className={styles.eyebrow}>{formatWeeklyDayLabel(event.dayOfWeek!)}</p> : null}
+      {!isWeekly && specificDate ? <p className={styles.eyebrow}>{specificDate}</p> : null}
 
-      <div className={`${styles.iconWrap} ${isWeekly ? '' : styles.iconWrapNoDay}`}>
+      <div className={`${styles.iconWrap} ${isWeekly || specificDate ? '' : styles.iconWrapNoEyebrow}`}>
         <img
           src={iconPath}
           alt=""

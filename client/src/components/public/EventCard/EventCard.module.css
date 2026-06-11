@@ -22,7 +22,7 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
-.day {
+.eyebrow {
   font-family: 'Oswald', sans-serif;
   font-size: 0.75rem;
   font-weight: 600;
@@ -40,7 +40,7 @@
   min-height: 5.5rem;
 }
 
-.iconWrapNoDay {
+.iconWrapNoEyebrow {
   margin-top: 0.5rem;
   min-height: 6.5rem;
 }

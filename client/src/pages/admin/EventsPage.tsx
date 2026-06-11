@@ -226,8 +226,8 @@ function EventsPage() {
             </div>
             <p className={styles.help}>
               {form.scheduleType === 'weekly'
-                ? 'Shows on the public site through the end date (including before the start date). The day label appears on each weekly card.'
-                : 'A one-time event on a single date. No day-of-week label on the public site.'}
+                ? 'Shows on the public site once the start date arrives, through the end date. The day-of-week label appears on each weekly card.'
+                : 'A one-time event on a single date. The event date appears at the top of each card.'}
             </p>
           </div>
 
@@ -430,8 +430,8 @@ function EventsPage() {
                         {EVENT_TYPE_LABELS[item.type]}
                       </span>
                       {isWeekly ? <span className={`pill ${styles.schedulePill}`}>Weekly</span> : null}
-                      {weeklyLive && !weeklyStarted ? (
-                        <span className={`pill ${styles.upcomingPill}`}>On site · starts later</span>
+                      {isWeekly && !weeklyStarted && !past ? (
+                        <span className={`pill ${styles.upcomingPill}`}>Starts later</span>
                       ) : null}
                       {weeklyLive && weeklyStarted ? (
                         <span className={`pill ${styles.livePill}`}>Live on site</span>

@@ -25,6 +25,16 @@ export function formatWeeklyDayLabel(dayOfWeek: number): string {
   return `${name.toUpperCase()}S`;
 }
 
+export function formatSpecificDateLabel(dateStr?: string): string | null {
+  if (!dateStr) return null;
+
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const month = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  return `${month} ${date.getDate()}`;
+}
+
 export function toInputDate(value?: string): string {
   if (!value) return '';
 
@@ -92,6 +102,7 @@ export function isWeeklyEventStarted(event: {
 
 export function isWeeklyEventLive(event: {
   scheduleType?: EventScheduleType;
+  startDate?: string;
   endDate?: string;
 }): boolean {
   if (event.scheduleType !== 'weekly' || !event.endDate) return false;
@@ -99,5 +110,8 @@ export function isWeeklyEventLive(event: {
   const today = startOfToday();
   const endDate = new Date(event.endDate);
   endDate.setHours(23, 59, 59, 999);
-  return endDate >= today;
+
+  if (endDate < today) return false;
+
+  return isWeeklyEventStarted(event);
 }

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { BRAND_ASSETS } from '../../../constants/brandAssets';
 import type { SiteSettings } from '../../../types';
 import styles from './ChristmasCTA.module.css';
@@ -21,7 +22,6 @@ function ChristmasCTA({ christmasParty }: ChristmasCTAProps) {
   if (!christmasParty.enabled) return null;
 
   const formattedDate = formatPartyDate(christmasParty.date);
-  const ticketHref = christmasParty.ticketUrl || '#contact';
 
   return (
     <section id="christmas" className={styles.section}>
@@ -42,14 +42,9 @@ function ChristmasCTA({ christmasParty }: ChristmasCTAProps) {
             <h2 className={styles.title}>{christmasParty.title}</h2>
             {formattedDate ? <p className={styles.date}>{formattedDate}</p> : null}
             {christmasParty.note ? <p className={styles.note}>{christmasParty.note}</p> : null}
-            <a
-              href={ticketHref}
-              className={`btn btn-green ${styles.ticketBtn}`}
-              target={christmasParty.ticketUrl ? '_blank' : undefined}
-              rel={christmasParty.ticketUrl ? 'noopener noreferrer' : undefined}
-            >
+            <Link to="/christmas-party" className={`btn btn-green ${styles.ticketBtn}`}>
               Get Tickets
-            </a>
+            </Link>
           </div>
 
           <div className={styles.right}>

@@ -7,6 +7,7 @@ import { useApiAuth } from './hooks/useApiAuth';
 import HomePage from './pages/public/HomePage';
 import SubmitPage from './pages/public/SubmitPage';
 import ThankYouPage from './pages/public/ThankYouPage';
+import ChristmasTicketsPage from './pages/public/ChristmasTicketsPage';
 import LoginPage from './pages/admin/LoginPage';
 import OverviewPage from './pages/admin/OverviewPage';
 import SubmissionsPage from './pages/admin/SubmissionsPage';
@@ -32,6 +33,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/submit" element={<SubmitPage />} />
         <Route path="/thank-you" element={<ThankYouPage />} />
+        <Route path="/christmas-party" element={<ChristmasTicketsPage />} />
         <Route path="/admin/login" element={<LoginPage />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<OverviewPage />} />

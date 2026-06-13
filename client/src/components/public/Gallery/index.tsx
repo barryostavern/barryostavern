@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useGallery } from '../../../hooks/useGallery';
 import type { GallerySubmission } from '../../../types';
+import GalleryLightbox from './GalleryLightbox';
 import styles from './Gallery.module.css';
 
 export interface GalleryProps {
@@ -19,6 +21,7 @@ function GallerySkeleton() {
 
 function Gallery({ instagramHandle = '', enabled = true }: GalleryProps) {
   const { photos, loading } = useGallery();
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   if (!enabled) {
     return null;
@@ -58,21 +61,37 @@ function Gallery({ instagramHandle = '', enabled = true }: GalleryProps) {
         ) : null}
 
         <div className={styles.grid}>
-          {photos.map((photo: GallerySubmission) => (
-            <figure key={photo._id} className={styles.tile}>
+          {photos.map((photo: GallerySubmission, index) => (
+            <button
+              key={photo._id}
+              type="button"
+              className={styles.tile}
+              onClick={() => setActiveIndex(index)}
+              aria-label={`View photo by ${photo.submitterName}${photo.caption ? `: ${photo.caption}` : ''}`}
+            >
               <img
                 src={photo.thumbnailUrl || photo.imageUrl}
-                alt={photo.caption || `Photo by ${photo.submitterName}`}
+                alt=""
                 loading="lazy"
               />
-              <figcaption className={styles.overlay}>
+              <span className={styles.overlay} aria-hidden="true">
+                <span className={styles.viewHint}>View</span>
                 <span className={styles.name}>{photo.submitterName}</span>
                 {photo.caption ? <span className={styles.caption}>{photo.caption}</span> : null}
-              </figcaption>
-            </figure>
+              </span>
+            </button>
           ))}
         </div>
       </div>
+
+      {activeIndex !== null ? (
+        <GalleryLightbox
+          photos={photos}
+          activeIndex={activeIndex}
+          onClose={() => setActiveIndex(null)}
+          onNavigate={setActiveIndex}
+        />
+      ) : null}
     </section>
   );
 }

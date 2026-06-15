@@ -3,7 +3,7 @@ import { EVENT_TYPES, type EventType } from '../constants/eventTypes';
 
 export interface IEvent extends Document {
   type: EventType;
-  scheduleType: 'weekly' | 'dated';
+  scheduleType: 'weekly' | 'dated' | 'multi_day';
   title: string;
   description: string;
   date?: Date;
@@ -19,7 +19,12 @@ export interface IEvent extends Document {
 const EventSchema = new Schema<IEvent>(
   {
     type: { type: String, enum: EVENT_TYPES, required: true },
-    scheduleType: { type: String, enum: ['weekly', 'dated'], default: 'dated', required: true },
+    scheduleType: {
+      type: String,
+      enum: ['weekly', 'dated', 'multi_day'],
+      default: 'dated',
+      required: true,
+    },
     title: { type: String, required: true, trim: true, maxlength: 120 },
     description: { type: String, default: '', maxlength: 400 },
     date: { type: Date },

@@ -21,7 +21,7 @@ function Nav() {
         </Link>
 
         <nav className={styles.links} aria-label="Primary">
-          <a href="/#events">Events</a>
+          <Link to="/calendar">Events</Link>
           <ContactLink>Contact</ContactLink>
           <Link to="/submit">Share a Photo</Link>
         </nav>

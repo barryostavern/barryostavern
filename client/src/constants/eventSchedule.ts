@@ -1,4 +1,4 @@
-export type EventScheduleType = 'weekly' | 'dated';
+export type EventScheduleType = 'weekly' | 'dated' | 'multi_day';
 
 export const TAVERN_TIME_ZONE = 'America/Detroit';
 
@@ -116,6 +116,63 @@ export function formatDateRange(startDate?: string, endDate?: string): string | 
   return `${formatter.format(start)} – ${formatter.format(end)}`;
 }
 
+export function formatWeekdayRange(startDate?: string, endDate?: string): string | null {
+  if (!startDate || !endDate) return null;
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+
+  const weekdayFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: TAVERN_TIME_ZONE,
+    weekday: 'short',
+  });
+
+  const startDay = weekdayFormatter.format(start).toUpperCase();
+  const endDay = weekdayFormatter.format(end).toUpperCase();
+
+  if (startDay === endDay) return startDay;
+
+  return `${startDay}–${endDay}`;
+}
+
+export function formatCompactDateRange(startDate?: string, endDate?: string): string | null {
+  if (!startDate || !endDate) return null;
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+
+  const startParts = getCalendarDateParts(start);
+  const endParts = getCalendarDateParts(end);
+  const startMonth = start
+    .toLocaleDateString('en-US', { month: 'short', timeZone: TAVERN_TIME_ZONE })
+    .toUpperCase();
+
+  if (startParts.year === endParts.year && startParts.month === endParts.month) {
+    return `${startMonth} ${startParts.day}–${endParts.day}`;
+  }
+
+  const endMonth = end
+    .toLocaleDateString('en-US', { month: 'short', timeZone: TAVERN_TIME_ZONE })
+    .toUpperCase();
+
+  return `${startMonth} ${startParts.day} – ${endMonth} ${endParts.day}`;
+}
+
+export function formatMultiDayDateBlockParts(
+  startDate?: string,
+  endDate?: string
+): { month: string; day: string } {
+  const compact = formatCompactDateRange(startDate, endDate);
+  if (!compact) return { month: '—', day: '—' };
+
+  const [month, ...rest] = compact.split(' ');
+  return { month, day: rest.join(' ') };
+}
+
 export function isEventPast(event: {
   scheduleType?: EventScheduleType;
   date: string;
@@ -123,7 +180,7 @@ export function isEventPast(event: {
 }): boolean {
   const today = toCalendarDateString(new Date());
 
-  if (event.scheduleType === 'weekly') {
+  if (event.scheduleType === 'weekly' || event.scheduleType === 'multi_day') {
     if (!event.endDate) return false;
     return toCalendarDateString(event.endDate) < today;
   }
@@ -152,4 +209,18 @@ export function isWeeklyEventLive(event: {
   if (toCalendarDateString(event.endDate) < today) return false;
 
   return isWeeklyEventStarted(event);
+}
+
+export function isMultiDayEventLive(event: {
+  scheduleType?: EventScheduleType;
+  startDate?: string;
+  endDate?: string;
+}): boolean {
+  if (event.scheduleType !== 'multi_day' || !event.startDate || !event.endDate) return false;
+
+  const today = toCalendarDateString(new Date());
+
+  if (toCalendarDateString(event.endDate) < today) return false;
+
+  return toCalendarDateString(event.startDate) <= today;
 }

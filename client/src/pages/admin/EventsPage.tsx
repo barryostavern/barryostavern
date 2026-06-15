@@ -5,7 +5,9 @@ import {
   DAY_OF_WEEK_OPTIONS,
   formatDateRange,
   formatEventDateParts,
+  formatMultiDayDateBlockParts,
   isEventPast,
+  isMultiDayEventLive,
   isWeeklyEventLive,
   isWeeklyEventStarted,
   toInputDate,
@@ -47,15 +49,21 @@ const EMPTY_FORM: EventFormState = {
   description: '',
 };
 
+function resolveFormScheduleType(event: Event): EventScheduleType {
+  if (event.scheduleType === 'weekly') return 'weekly';
+  if (event.scheduleType === 'multi_day') return 'multi_day';
+  return 'dated';
+}
+
 function eventToForm(event: Event): EventFormState {
-  const scheduleType = event.scheduleType === 'weekly' ? 'weekly' : 'dated';
+  const scheduleType = resolveFormScheduleType(event);
 
   return {
     scheduleType,
     type: event.type,
     date: toInputDate(event.date),
     dayOfWeek: event.dayOfWeek ?? 1,
-    startDate: toInputDate(event.startDate),
+    startDate: toInputDate(event.startDate ?? event.date),
     endDate: toInputDate(event.endDate),
     timeLabel: event.timeLabel ?? '',
     title: event.title,
@@ -69,12 +77,30 @@ function buildEventPayload(form: EventFormState) {
     scheduleType: form.scheduleType,
     date: form.scheduleType === 'dated' ? form.date : undefined,
     dayOfWeek: form.scheduleType === 'weekly' ? form.dayOfWeek : undefined,
-    startDate: form.scheduleType === 'weekly' ? form.startDate : undefined,
-    endDate: form.scheduleType === 'weekly' ? form.endDate : undefined,
+    startDate:
+      form.scheduleType === 'weekly' || form.scheduleType === 'multi_day'
+        ? form.startDate
+        : undefined,
+    endDate:
+      form.scheduleType === 'weekly' || form.scheduleType === 'multi_day'
+        ? form.endDate
+        : undefined,
     timeLabel: form.timeLabel.trim() || 'TBD',
     title: form.title.trim(),
     description: form.description.trim(),
   };
+}
+
+function scheduleHelpText(scheduleType: EventScheduleType): string {
+  if (scheduleType === 'weekly') {
+    return 'Shows on the public site once the start date arrives, through the end date. The day-of-week label appears on each weekly card.';
+  }
+
+  if (scheduleType === 'multi_day') {
+    return 'Back-to-back days for one event — like a tournament running Thursday through Sunday. Shows until the last day passes.';
+  }
+
+  return 'A one-time event on a single date. The event date appears at the top of each card.';
 }
 
 function EventsPage() {
@@ -124,6 +150,21 @@ function EventsPage() {
 
     if (form.scheduleType === 'weekly' && (!form.startDate || !form.endDate)) {
       toast('Start and end dates are required for weekly events', 'error');
+      return;
+    }
+
+    if (form.scheduleType === 'multi_day' && (!form.startDate || !form.endDate)) {
+      toast('Start and end dates are required for multi-day events', 'error');
+      return;
+    }
+
+    if (
+      form.scheduleType === 'multi_day' &&
+      form.startDate &&
+      form.endDate &&
+      form.endDate < form.startDate
+    ) {
+      toast('End date must be on or after the start date', 'error');
       return;
     }
 
@@ -206,6 +247,16 @@ function EventsPage() {
                 <input
                   type="radio"
                   name="schedule-type"
+                  value="multi_day"
+                  checked={form.scheduleType === 'multi_day'}
+                  onChange={() => setForm({ ...form, scheduleType: 'multi_day' })}
+                />
+                <span>Multiple days</span>
+              </label>
+              <label className={styles.scheduleOption}>
+                <input
+                  type="radio"
+                  name="schedule-type"
                   value="weekly"
                   checked={form.scheduleType === 'weekly'}
                   onChange={() => setForm({ ...form, scheduleType: 'weekly' })}
@@ -213,11 +264,7 @@ function EventsPage() {
                 <span>Weekly</span>
               </label>
             </div>
-            <p className={styles.help}>
-              {form.scheduleType === 'weekly'
-                ? 'Shows on the public site once the start date arrives, through the end date. The day-of-week label appears on each weekly card.'
-                : 'A one-time event on a single date. The event date appears at the top of each card.'}
-            </p>
+            <p className={styles.help}>{scheduleHelpText(form.scheduleType)}</p>
           </div>
 
           <div>
@@ -256,6 +303,35 @@ function EventsPage() {
                 required
               />
             </div>
+          ) : form.scheduleType === 'multi_day' ? (
+            <>
+              <div>
+                <label className={formStyles.fieldLabel} htmlFor="event-start-date">
+                  First day
+                </label>
+                <input
+                  id="event-start-date"
+                  type="date"
+                  className={formStyles.input}
+                  value={form.startDate}
+                  onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className={formStyles.fieldLabel} htmlFor="event-end-date">
+                  Last day
+                </label>
+                <input
+                  id="event-end-date"
+                  type="date"
+                  className={formStyles.input}
+                  value={form.endDate}
+                  onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                  required
+                />
+              </div>
+            </>
           ) : (
             <>
               <div>
@@ -384,6 +460,7 @@ function EventsPage() {
           <ul className={styles.eventList}>
             {events.map((item) => {
               const isWeekly = item.scheduleType === 'weekly';
+              const isMultiDay = item.scheduleType === 'multi_day';
               const past = isEventPast({
                 scheduleType: item.scheduleType ?? 'dated',
                 date: item.date ?? item.startDate ?? '',
@@ -397,10 +474,17 @@ function EventsPage() {
                         ?.label.slice(0, 3)
                         .toUpperCase() ?? '—',
                   }
-                : formatEventDateParts(item.date);
-              const scheduleRange = isWeekly ? formatDateRange(item.startDate, item.endDate) : null;
+                : isMultiDay
+                  ? formatMultiDayDateBlockParts(item.startDate, item.endDate)
+                  : formatEventDateParts(item.date);
+              const scheduleRange = isWeekly
+                ? formatDateRange(item.startDate, item.endDate)
+                : isMultiDay
+                  ? formatDateRange(item.startDate, item.endDate)
+                  : null;
               const weeklyLive = isWeekly && isWeeklyEventLive(item);
               const weeklyStarted = isWeekly && isWeeklyEventStarted(item);
+              const multiDayLive = isMultiDay && isMultiDayEventLive(item);
               const isEditing = editingId === item._id;
 
               return (
@@ -408,7 +492,9 @@ function EventsPage() {
                   key={item._id}
                   className={`${styles.eventRow} ${past ? styles.past : ''} ${isEditing ? styles.editingRow : ''}`}
                 >
-                  <div className={`${styles.dateBlock} ${isWeekly ? styles.weeklyBlock : ''}`}>
+                  <div
+                    className={`${styles.dateBlock} ${isWeekly ? styles.weeklyBlock : ''} ${isMultiDay ? styles.multiDayBlock : ''}`}
+                  >
                     <span className={styles.month}>{month}</span>
                     <span className={styles.day}>{day}</span>
                   </div>
@@ -419,10 +505,19 @@ function EventsPage() {
                         {EVENT_TYPE_LABELS[item.type]}
                       </span>
                       {isWeekly ? <span className={`pill ${styles.schedulePill}`}>Weekly</span> : null}
+                      {isMultiDay ? (
+                        <span className={`pill ${styles.schedulePill}`}>Multiple days</span>
+                      ) : null}
                       {isWeekly && !weeklyStarted && !past ? (
                         <span className={`pill ${styles.upcomingPill}`}>Starts later</span>
                       ) : null}
+                      {isMultiDay && !multiDayLive && !past ? (
+                        <span className={`pill ${styles.upcomingPill}`}>Starts later</span>
+                      ) : null}
                       {weeklyLive && weeklyStarted ? (
+                        <span className={`pill ${styles.livePill}`}>Live on site</span>
+                      ) : null}
+                      {multiDayLive ? (
                         <span className={`pill ${styles.livePill}`}>Live on site</span>
                       ) : null}
                       {past ? <span className={`pill past ${styles.pastPill}`}>Past · hidden</span> : null}

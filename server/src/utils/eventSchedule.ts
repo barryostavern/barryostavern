@@ -1,4 +1,4 @@
-export type EventScheduleType = 'weekly' | 'dated';
+export type EventScheduleType = 'weekly' | 'dated' | 'multi_day';
 
 export interface EventScheduleFields {
   scheduleType?: EventScheduleType;
@@ -104,7 +104,9 @@ export function getTodayBounds(now = new Date()) {
 }
 
 export function resolveScheduleType(event: EventScheduleFields): EventScheduleType {
-  return event.scheduleType === 'weekly' ? 'weekly' : 'dated';
+  if (event.scheduleType === 'weekly') return 'weekly';
+  if (event.scheduleType === 'multi_day') return 'multi_day';
+  return 'dated';
 }
 
 export function isWeeklyEventActive(event: EventScheduleFields, now = new Date()): boolean {
@@ -141,9 +143,22 @@ export function isDatedEventActive(event: EventScheduleFields, now = new Date())
   return toCalendarDateString(eventDate) >= toCalendarDateString(now);
 }
 
+export function isMultiDayEventActive(event: EventScheduleFields, now = new Date()): boolean {
+  if (resolveScheduleType(event) !== 'multi_day' || !event.endDate) return false;
+
+  const endDate = new Date(event.endDate);
+  if (Number.isNaN(endDate.getTime())) return false;
+
+  return toCalendarDateString(endDate) >= toCalendarDateString(now);
+}
+
 export function isEventActive(event: EventScheduleFields, now = new Date()): boolean {
   if (resolveScheduleType(event) === 'weekly') {
     return isWeeklyEventActive(event, now) && getWeeklyNextOccurrence(event, now) !== null;
+  }
+
+  if (resolveScheduleType(event) === 'multi_day') {
+    return isMultiDayEventActive(event, now);
   }
 
   return isDatedEventActive(event, now);
@@ -151,6 +166,11 @@ export function isEventActive(event: EventScheduleFields, now = new Date()): boo
 
 export function isEventPast(event: EventScheduleFields, now = new Date()): boolean {
   if (resolveScheduleType(event) === 'weekly') {
+    if (!event.endDate) return false;
+    return toCalendarDateString(event.endDate) < toCalendarDateString(now);
+  }
+
+  if (resolveScheduleType(event) === 'multi_day') {
     if (!event.endDate) return false;
     return toCalendarDateString(event.endDate) < toCalendarDateString(now);
   }
@@ -171,6 +191,10 @@ export function getActiveEventsFilter(now = new Date()) {
       {
         scheduleType: 'weekly',
         startDate: { $lte: endOfToday },
+        endDate: { $gte: startOfToday },
+      },
+      {
+        scheduleType: 'multi_day',
         endDate: { $gte: startOfToday },
       },
     ],
@@ -212,6 +236,11 @@ export function getWeeklyNextOccurrence(
 export function getEventSortDate(event: EventScheduleFields, now = new Date()): Date | null {
   if (resolveScheduleType(event) === 'weekly') {
     return getWeeklyNextOccurrence(event, now);
+  }
+
+  if (resolveScheduleType(event) === 'multi_day') {
+    if (!event.startDate) return null;
+    return normalizeCalendarDate(event.startDate);
   }
 
   if (!event.date) return null;
@@ -268,16 +297,38 @@ function parseDateInput(value: unknown, fieldName: string): Date {
 
 export function parseEventScheduleInput(body: Record<string, unknown>): ParsedEventSchedule {
   const scheduleType =
-    body.scheduleType === 'weekly' ? 'weekly' : body.scheduleType === 'dated' ? 'dated' : null;
+    body.scheduleType === 'weekly'
+      ? 'weekly'
+      : body.scheduleType === 'dated'
+        ? 'dated'
+        : body.scheduleType === 'multi_day'
+          ? 'multi_day'
+          : null;
 
   if (!scheduleType) {
-    throw new Error('scheduleType must be weekly or dated');
+    throw new Error('scheduleType must be dated, multi_day, or weekly');
   }
 
   if (scheduleType === 'dated') {
     const date = parseDateInput(body.date, 'date');
 
     return { scheduleType, date };
+  }
+
+  if (scheduleType === 'multi_day') {
+    const startDate = parseDateInput(body.startDate, 'startDate');
+    const endDate = parseDateInput(body.endDate, 'endDate');
+
+    if (toCalendarDateString(endDate) < toCalendarDateString(startDate)) {
+      throw new Error('endDate must be on or after startDate');
+    }
+
+    return {
+      scheduleType,
+      startDate,
+      endDate,
+      date: startDate,
+    };
   }
 
   const dayOfWeek = body.dayOfWeek;
@@ -333,6 +384,10 @@ export function buildEventFieldsFromBody(body: Record<string, unknown>): EventWr
 
     if (schedule.scheduleType === 'dated') {
       unset.push('dayOfWeek', 'startDate', 'endDate');
+    } else if (schedule.scheduleType === 'multi_day') {
+      unset.push('dayOfWeek');
+      set.startDate = schedule.startDate;
+      set.endDate = schedule.endDate;
     } else {
       set.dayOfWeek = schedule.dayOfWeek;
       set.startDate = schedule.startDate;

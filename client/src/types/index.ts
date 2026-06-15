@@ -1,8 +1,7 @@
 import type { EventType } from '../constants/eventTypes';
+import type { EventScheduleType } from '../constants/eventSchedule';
 
-export type { EventType };
-
-export type EventScheduleType = 'weekly' | 'dated';
+export type { EventType, EventScheduleType };
 
 export interface Event {
   _id: string;

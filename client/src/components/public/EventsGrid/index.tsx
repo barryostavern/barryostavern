@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { Event } from '../../../types';
 import EventCard from '../EventCard';
 import styles from './EventsGrid.module.css';
@@ -16,9 +17,9 @@ function EventsGrid({ events }: EventsGridProps) {
       </div>
 
       <div className={styles.footer}>
-        <a href="#events" className="btn btn-outline">
+        <Link to="/calendar" className="btn btn-outline">
           View Full Calendar
-        </a>
+        </Link>
       </div>
     </>
   );

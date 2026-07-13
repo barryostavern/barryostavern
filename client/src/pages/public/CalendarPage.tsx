@@ -54,7 +54,7 @@ function CalendarPage() {
           ) : events.length > 0 ? (
             <EventCalendarList events={events} />
           ) : (
-            <EvergreenPanel />
+            <EvergreenPanel instagramHandle={settings?.instagram?.handle} />
           )}
         </div>
       </main>

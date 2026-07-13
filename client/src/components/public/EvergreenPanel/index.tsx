@@ -19,7 +19,14 @@ function ShamrockWatermark() {
   );
 }
 
-function EvergreenPanel() {
+export interface EvergreenPanelProps {
+  instagramHandle?: string;
+}
+
+function EvergreenPanel({ instagramHandle = '' }: EvergreenPanelProps) {
+  const handle = instagramHandle.replace(/^@/, '');
+  const instagramUrl = handle ? `https://instagram.com/${handle}` : undefined;
+
   return (
     <section className={styles.panel} aria-labelledby="evergreen-heading">
       <ShamrockWatermark />
@@ -43,9 +50,16 @@ function EvergreenPanel() {
         </div>
 
         <div className={styles.ctas}>
-          <a href="#instagram" className="btn btn-outline">
-            Follow for Updates
-          </a>
+          {instagramUrl ? (
+            <a
+              href={instagramUrl}
+              className="btn btn-outline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Follow for Updates
+            </a>
+          ) : null}
           <ContactLink className="btn btn-green">See Hours &amp; Find Us</ContactLink>
         </div>
       </div>

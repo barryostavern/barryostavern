@@ -13,7 +13,11 @@ function EventsSkeleton() {
   );
 }
 
-function EventsSection() {
+export interface EventsSectionProps {
+  instagramHandle?: string;
+}
+
+function EventsSection({ instagramHandle }: EventsSectionProps) {
   const { events, loading } = useEvents();
 
   return (
@@ -29,7 +33,7 @@ function EventsSection() {
         ) : events.length > 0 ? (
           <EventsGrid events={events} />
         ) : (
-          <EvergreenPanel />
+          <EvergreenPanel instagramHandle={instagramHandle} />
         )}
       </div>
     </section>

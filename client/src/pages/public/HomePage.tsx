@@ -70,7 +70,7 @@ function HomePage() {
           subheadline={settings.hero.subheadline}
         />
         <AnnouncementBar {...settings.announcement} />
-        <EventsSection />
+        <EventsSection instagramHandle={settings.instagram?.handle} />
         <ChristmasCTA christmasParty={settings.christmasParty} />
         <Gallery
           instagramHandle={settings.instagram?.handle}

@@ -2,6 +2,10 @@ import { Router, Response } from 'express';
 import mongoose from 'mongoose';
 import { EVENT_TYPES, type EventType } from '../constants/eventTypes';
 import {
+  MAX_ADVANCE_PRICE_CENTS,
+  MIN_ADVANCE_PRICE_CENTS,
+} from '../constants/tickets';
+import {
   buildEventFieldsFromBody,
   getActiveEventsFilter,
   parseEventScheduleInput,
@@ -11,7 +15,8 @@ import {
 import { checkJwt, extractAuth0Sub } from '../middleware/auth';
 import { heroVideoUpload } from '../middleware/uploadHero';
 import { asyncHandler, createError } from '../middleware/errorHandler';
-import { Event, SiteSettings, Submission, User } from '../models';
+import { Event, SiteSettings, Submission, TicketOrder, User } from '../models';
+import type { ITicketOrder } from '../models/TicketOrder';
 import type { ISiteSettings } from '../models/SiteSettings';
 import { uploadHeroVideo } from '../services/storage';
 import { destroyImage, moveToGallery } from '../services/imagePipeline';
@@ -23,15 +28,6 @@ router.use(checkJwt);
 
 const LINK_TARGETS = ['Events', 'Christmas Party', 'Menu', 'Contact'] as const;
 type LinkTarget = (typeof LINK_TARGETS)[number];
-
-function isValidUrl(value: string): boolean {
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
 
 function getDaysUntil(date?: Date): number | null {
   if (!date) return null;
@@ -86,13 +82,20 @@ function mergeSiteSettings(
 
     const christmasParty = body.christmasParty as Record<string, unknown>;
 
-    if (
-      typeof christmasParty.ticketUrl === 'string' &&
-      christmasParty.ticketUrl.trim() !== '' &&
-      !isValidUrl(christmasParty.ticketUrl)
-    ) {
-      throw createError('Invalid christmasParty.ticketUrl', 400);
+    if (christmasParty.advancePriceCents !== undefined) {
+      const cents = christmasParty.advancePriceCents;
+      if (
+        typeof cents !== 'number' ||
+        !Number.isInteger(cents) ||
+        cents < MIN_ADVANCE_PRICE_CENTS ||
+        cents > MAX_ADVANCE_PRICE_CENTS
+      ) {
+        throw createError('Advance price must be between $1.00 and $500.00', 400);
+      }
     }
+
+    delete christmasParty.ticketUrl;
+    delete christmasParty.paypalClientId;
 
     if (christmasParty.date !== undefined && christmasParty.date !== null) {
       const parsed = new Date(String(christmasParty.date));
@@ -490,6 +493,41 @@ router.post(
     await settings.save();
 
     res.json({ data: { videoUrl } });
+  })
+);
+
+function toAdminTicket(order: ITicketOrder) {
+  return {
+    _id: String(order._id),
+    payerName: order.payerName,
+    payerEmail: order.payerEmail,
+    quantity: order.quantity,
+    amountCents: order.amountCents,
+    paidAt: (order.paidAt ?? order.updatedAt).toISOString(),
+    reference: order.captureId || order.paypalOrderId,
+  };
+}
+
+router.get(
+  '/tickets',
+  asyncHandler(async (_req, res: Response) => {
+    const [orders, summary] = await Promise.all([
+      TicketOrder.find({ status: 'paid' }).sort({ paidAt: -1 }).limit(200),
+      TicketOrder.aggregate<{ tickets: number; orders: number }>([
+        { $match: { status: 'paid' } },
+        { $group: { _id: null, tickets: { $sum: '$quantity' }, orders: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const totals = summary[0] ?? { tickets: 0, orders: 0 };
+
+    res.json({
+      data: {
+        orders: orders.map(toAdminTicket),
+        ticketsSold: totals.tickets,
+        orderCount: totals.orders,
+      },
+    });
   })
 );
 

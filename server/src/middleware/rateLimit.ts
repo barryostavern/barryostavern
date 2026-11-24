@@ -12,6 +12,18 @@ export const submissionRateLimit = rateLimit({
   },
 });
 
+export const ticketRateLimit = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
+  max: parseInt(process.env.RATE_LIMIT_MAX_TICKETS || '20', 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({
+      error: 'Too many checkout attempts. Please wait a while and try again.',
+    });
+  },
+});
+
 export const contactRateLimit = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
   max: parseInt(process.env.RATE_LIMIT_MAX_CONTACT || '5', 10),

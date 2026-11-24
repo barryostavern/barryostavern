@@ -1,3 +1,4 @@
+import { DEFAULT_ADVANCE_PRICE_CENTS } from '../constants/tickets';
 import { SiteSettings } from '../models';
 
 export async function ensureSettings(): Promise<void> {
@@ -16,4 +17,14 @@ export async function ensureSettings(): Promise<void> {
       },
     });
   }
+
+  await SiteSettings.updateMany(
+    {
+      $or: [
+        { 'christmasParty.advancePriceCents': { $exists: false } },
+        { 'christmasParty.advancePriceCents': null },
+      ],
+    },
+    { $set: { 'christmasParty.advancePriceCents': DEFAULT_ADVANCE_PRICE_CENTS } }
+  );
 }

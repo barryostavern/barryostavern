@@ -1,0 +1,78 @@
+.main {
+  min-height: calc(100vh - 120px);
+  min-height: calc(100dvh - 120px);
+  display: flex;
+  align-items: center;
+  padding: 3rem 0;
+}
+
+.card {
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  border-radius: var(--radius-panel);
+  border: var(--border-container) solid var(--line);
+  background: var(--panel);
+}
+
+.title {
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin-bottom: 0.75rem;
+}
+
+.message {
+  font-family: 'Barlow', sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+
+.details {
+  margin: 0 0 1.75rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.details div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.details dt {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.details dd {
+  margin: 0;
+  font-family: 'Barlow', sans-serif;
+  color: var(--text);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.card .btn {
+  min-width: 14rem;
+}
+
+@media (max-width: 560px) {
+  .card {
+    padding: 2rem 1.25rem;
+  }
+}

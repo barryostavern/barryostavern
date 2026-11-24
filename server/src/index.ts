@@ -14,6 +14,8 @@ import publicRouter from './routes/public';
 import adminRouter from './routes/admin';
 import contactRouter from './routes/contact';
 import submissionsRouter from './routes/submissions';
+import ticketRouter from './routes/tickets';
+import ticketWebhookRouter from './routes/ticketWebhook';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -52,6 +54,11 @@ app.use(
   })
 );
 app.use(morgan('dev'));
+app.use(
+  '/api/tickets/webhook',
+  express.raw({ type: 'application/json', limit: '1mb' }),
+  ticketWebhookRouter
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -59,6 +66,7 @@ app.use('/api/health', healthRoutes);
 app.use('/api', publicRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/submissions', submissionsRouter);
+app.use('/api/tickets', ticketRouter);
 app.use('/api/admin', adminRouter);
 
 app.use(notFoundHandler);

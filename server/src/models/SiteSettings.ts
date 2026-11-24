@@ -11,7 +11,7 @@ export interface ISiteSettings extends Document {
     title: string;
     date?: Date;
     note: string;
-    ticketUrl: string;
+    advancePriceCents?: number;
   };
   hero: {
     videoUrl?: string;
@@ -42,7 +42,7 @@ const SiteSettingsSchema = new Schema<ISiteSettings>(
       title: { type: String, default: 'Annual Christmas Party' },
       date: { type: Date },
       note: { type: String, default: '' },
-      ticketUrl: { type: String, default: '' },
+      advancePriceCents: { type: Number, default: 1500, min: 100, max: 50000 },
     },
     hero: {
       videoUrl: String,

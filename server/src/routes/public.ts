@@ -1,7 +1,9 @@
 import { Router, Response } from 'express';
+import { getAdvancePriceCents } from '../constants/tickets';
 import { Event, SiteSettings, Submission } from '../models';
 import type { ISiteSettings } from '../models/SiteSettings';
 import { asyncHandler, createError } from '../middleware/errorHandler';
+import { getPayPalClientId } from '../services/paypal';
 import {
   filterActiveEventsForDisplay,
   getActiveEventsFilter,
@@ -24,7 +26,8 @@ function toPublicSiteSettings(doc: ISiteSettings) {
       title: doc.christmasParty.title,
       date: doc.christmasParty.date,
       note: doc.christmasParty.note,
-      ticketUrl: doc.christmasParty.ticketUrl,
+      advancePriceCents: getAdvancePriceCents(doc.christmasParty.advancePriceCents),
+      paypalClientId: getPayPalClientId(),
     },
     hero: {
       videoUrl: doc.hero?.videoUrl,

@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Footer from '../../components/public/Footer';
 import Nav from '../../components/public/Nav';
+import PayPalTicketButton from '../../components/public/PayPalTicketButton';
 import ShamrockIcon from '../../components/shared/ShamrockIcon';
 import { BRAND_ASSETS } from '../../constants/brandAssets';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
@@ -10,7 +11,6 @@ import styles from './ChristmasTicketsPage.module.css';
 
 type TicketOption = 'advance' | 'dayOf';
 
-const ADVANCE_PRICE = 15;
 const DAY_OF_PRICE = 20;
 const DOORS_TIME = '7:00 PM';
 const MUSIC_TIME = '8:30 PM';
@@ -19,6 +19,17 @@ const DEFAULT_DESCRIPTION =
   "Barry O's biggest party of the year! Join us for a night of holiday cheer, great music, cold drinks and good times with friends.";
 const MUSIC_DESCRIPTION =
   "A Barry O's tradition for decades. Sing along to all your holiday favorites and a few surprises.";
+
+const MAX_TICKETS_PER_ORDER = 10;
+
+function formatCents(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
+
+function formatSavings(cents: number): string {
+  if (cents % 100 === 0) return String(cents / 100);
+  return (cents / 100).toFixed(2);
+}
 
 function formatPartyDateLong(dateStr?: string): string | null {
   if (!dateStr) return null;
@@ -101,14 +112,6 @@ function MapPinIcon() {
   );
 }
 
-function ArrowIcon() {
-  return (
-    <svg className={styles.inlineIcon} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z" />
-    </svg>
-  );
-}
-
 function LockIcon() {
   return (
     <svg className={styles.lockIcon} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -119,7 +122,19 @@ function LockIcon() {
 
 function ChristmasTicketsPage() {
   const { settings, loading } = useSiteSettings();
+  const navigate = useNavigate();
   const [ticketOption, setTicketOption] = useState<TicketOption>('advance');
+  const [quantity, setQuantity] = useState(1);
+  const [checkoutMessage, setCheckoutMessage] = useState('');
+  const quantityRef = useRef(quantity);
+  quantityRef.current = quantity;
+
+  const handlePaid = useCallback(
+    (confirmationToken: string) => {
+      navigate(`/christmas-party/confirmation?token=${encodeURIComponent(confirmationToken)}`);
+    },
+    [navigate]
+  );
 
   if (loading) {
     return (
@@ -157,9 +172,11 @@ function ChristmasTicketsPage() {
   const formattedDateShort = formatPartyDateShort(christmasParty.date);
   const calendarUrl = buildGoogleCalendarUrl(christmasParty.title, christmasParty.date);
   const description = christmasParty.note?.trim() || DEFAULT_DESCRIPTION;
-  const selectedPrice = ticketOption === 'advance' ? ADVANCE_PRICE : DAY_OF_PRICE;
-  const checkoutUrl = christmasParty.ticketUrl?.trim();
-  const canCheckout = ticketOption === 'advance' && Boolean(checkoutUrl);
+  const advancePriceCents = christmasParty.advancePriceCents ?? 1500;
+  const paypalClientId = christmasParty.paypalClientId?.trim() ?? '';
+  const savingsCents = DAY_OF_PRICE * 100 - advancePriceCents;
+  const totalCents = advancePriceCents * quantity;
+  const canCheckout = ticketOption === 'advance' && Boolean(paypalClientId);
 
   return (
     <>
@@ -255,16 +272,25 @@ function ChristmasTicketsPage() {
                     name="ticketType"
                     value="advance"
                     checked={ticketOption === 'advance'}
-                    onChange={() => setTicketOption('advance')}
+                    onChange={() => {
+                      setTicketOption('advance');
+                      setCheckoutMessage('');
+                    }}
                     className={styles.ticketRadio}
                   />
                   <span className={styles.ticketOptionBody}>
                     <span className={styles.ticketOptionTop}>
                       <span className={styles.ticketOptionName}>Advance Ticket</span>
-                      <span className={styles.ticketOptionPrice}>${ADVANCE_PRICE.toFixed(2)} + fees</span>
+                      <span className={styles.ticketOptionPrice}>
+                        ${formatCents(advancePriceCents)} + fees
+                      </span>
                     </span>
                     <span className={styles.ticketOptionSub}>General Admission</span>
-                    <span className={styles.ticketOptionHighlight}>Recommended: Save $5!</span>
+                    {savingsCents > 0 ? (
+                      <span className={styles.ticketOptionHighlight}>
+                        Recommended: Save ${formatSavings(savingsCents)}!
+                      </span>
+                    ) : null}
                   </span>
                 </label>
 
@@ -280,7 +306,10 @@ function ChristmasTicketsPage() {
                     name="ticketType"
                     value="dayOf"
                     checked={ticketOption === 'dayOf'}
-                    onChange={() => setTicketOption('dayOf')}
+                    onChange={() => {
+                      setTicketOption('dayOf');
+                      setCheckoutMessage('');
+                    }}
                     className={styles.ticketRadio}
                   />
                   <span className={styles.ticketOptionBody}>
@@ -293,27 +322,68 @@ function ChristmasTicketsPage() {
                 </label>
               </fieldset>
 
+              {ticketOption === 'advance' ? (
+                <div className={styles.quantity}>
+                  <span className={styles.quantityLabel} id="ticket-quantity-label">
+                    How many
+                  </span>
+                  <div className={styles.quantityControls}>
+                    <button
+                      type="button"
+                      className={styles.quantityButton}
+                      onClick={() => setQuantity((current) => Math.max(1, current - 1))}
+                      disabled={quantity <= 1}
+                      aria-label="Fewer tickets"
+                    >
+                      −
+                    </button>
+                    <span className={styles.quantityValue} aria-labelledby="ticket-quantity-label">
+                      {quantity}
+                    </span>
+                    <button
+                      type="button"
+                      className={styles.quantityButton}
+                      onClick={() =>
+                        setQuantity((current) => Math.min(MAX_TICKETS_PER_ORDER, current + 1))
+                      }
+                      disabled={quantity >= MAX_TICKETS_PER_ORDER}
+                      aria-label="More tickets"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
               {canCheckout ? (
-                <a
-                  href={checkoutUrl}
-                  className={`btn btn-green ${styles.buyBtn}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Buy Tickets — ${selectedPrice.toFixed(2)}
-                  <ArrowIcon />
-                </a>
+                <>
+                  <p className={styles.totalLine}>Total ${formatCents(totalCents)}</p>
+                  <div className={styles.paypalSlot}>
+                    <PayPalTicketButton
+                      clientId={paypalClientId}
+                      quantityRef={quantityRef}
+                      onPaid={handlePaid}
+                      onMessage={setCheckoutMessage}
+                    />
+                  </div>
+                </>
               ) : (
                 <button type="button" className={`btn btn-green ${styles.buyBtn}`} disabled>
                   {ticketOption === 'dayOf'
-                    ? `Pay at the Door — $${selectedPrice.toFixed(2)}`
+                    ? `Pay at the Door — $${DAY_OF_PRICE.toFixed(2)}`
                     : 'Ticket checkout coming soon'}
                 </button>
               )}
 
+              {checkoutMessage ? (
+                <p className={styles.checkoutStatus} role="status">
+                  {checkoutMessage}
+                </p>
+              ) : null}
+
               <p className={styles.checkoutNote}>
                 <LockIcon />
-                Secure checkout powered by <strong>Stripe</strong>
+                Secure checkout powered by <strong>PayPal</strong>
               </p>
             </div>
           </div>

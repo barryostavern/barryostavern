@@ -309,6 +309,76 @@
   transform: none;
 }
 
+.quantity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
+}
+
+.quantityLabel {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green-deep);
+}
+
+.quantityControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quantityButton {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  border: 2px solid rgba(15, 92, 46, 0.2);
+  background: #fff;
+  color: #1a241c;
+  font-family: 'Barlow', sans-serif;
+  font-size: 1.125rem;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1;
+}
+
+.quantityButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.quantityValue {
+  min-width: 1.5rem;
+  text-align: center;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  color: #1a241c;
+}
+
+.totalLine {
+  margin: 0 0 0.875rem;
+  text-align: center;
+  font-family: 'Barlow', sans-serif;
+  font-weight: 700;
+  color: #1a241c;
+}
+
+.paypalSlot {
+  min-height: 3rem;
+}
+
+.checkoutStatus {
+  margin-top: 0.75rem;
+  text-align: center;
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.8125rem;
+  color: #5c6b60;
+}
+
 .checkoutNote {
   display: flex;
   align-items: center;

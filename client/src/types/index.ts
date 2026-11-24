@@ -27,7 +27,8 @@ export interface SiteSettings {
     title: string;
     date?: string;
     note: string;
-    ticketUrl: string;
+    advancePriceCents?: number;
+    paypalClientId?: string | null;
   };
   hero: {
     videoUrl?: string;
@@ -88,6 +89,16 @@ export interface OverviewStats {
     enabled: boolean;
     daysUntil: number | null;
   };
+}
+
+export interface AdminTicketOrder {
+  _id: string;
+  payerName: string;
+  payerEmail: string;
+  quantity: number;
+  amountCents: number;
+  paidAt: string;
+  reference: string;
 }
 
 export interface ApiListResponse<T> {

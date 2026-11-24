@@ -4,6 +4,7 @@ import { EVENT_TYPES, type EventType } from '../constants/eventTypes';
 import {
   MAX_ADVANCE_PRICE_CENTS,
   MIN_ADVANCE_PRICE_CENTS,
+  getPartyTime,
 } from '../constants/tickets';
 import {
   buildEventFieldsFromBody,
@@ -96,6 +97,22 @@ function mergeSiteSettings(
 
     delete christmasParty.ticketUrl;
     delete christmasParty.paypalClientId;
+
+    if (christmasParty.startTime !== undefined) {
+      const startTime = getPartyTime(christmasParty.startTime, '');
+      if (!startTime) {
+        throw createError('Start time must be a valid time', 400);
+      }
+      christmasParty.startTime = startTime;
+    }
+
+    if (christmasParty.endTime !== undefined) {
+      const endTime = getPartyTime(christmasParty.endTime, '');
+      if (!endTime) {
+        throw createError('End time must be a valid time', 400);
+      }
+      christmasParty.endTime = endTime;
+    }
 
     if (christmasParty.date !== undefined && christmasParty.date !== null) {
       const parsed = new Date(String(christmasParty.date));

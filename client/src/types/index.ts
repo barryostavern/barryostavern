@@ -28,6 +28,8 @@ export interface SiteSettings {
     date?: string;
     note: string;
     advancePriceCents?: number;
+    startTime?: string;
+    endTime?: string;
     paypalClientId?: string | null;
   };
   hero: {

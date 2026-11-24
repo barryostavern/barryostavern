@@ -12,6 +12,8 @@ type ChristmasForm = {
   title: string;
   note: string;
   advancePriceCents: number;
+  startTime: string;
+  endTime: string;
 };
 
 interface TicketSales {
@@ -52,6 +54,12 @@ function formatPaidAt(iso: string): string {
   });
 }
 
+function normalizeTimeInput(value: string): string | null {
+  const match = value.trim().match(/^([01]\d|2[0-3]):([0-5]\d)/);
+  if (!match) return null;
+  return `${match[1]}:${match[2]}`;
+}
+
 function getDaysAwayLabel(dateStr: string): string {
   if (!dateStr) return 'No date set';
 
@@ -75,6 +83,8 @@ function ChristmasPage() {
     title: 'Annual Christmas Party',
     note: '',
     advancePriceCents: 1500,
+    startTime: '19:00',
+    endTime: '23:30',
   });
   const [dateInput, setDateInput] = useState('');
   const [priceInput, setPriceInput] = useState('15.00');
@@ -94,6 +104,8 @@ function ChristmasPage() {
           title: settings.christmasParty.title,
           note: settings.christmasParty.note,
           advancePriceCents: cents,
+          startTime: normalizeTimeInput(settings.christmasParty.startTime ?? '') ?? '19:00',
+          endTime: normalizeTimeInput(settings.christmasParty.endTime ?? '') ?? '23:30',
         });
         setDateInput(toDateInputValue(settings.christmasParty.date));
         setPriceInput(centsToPriceInput(cents));
@@ -135,12 +147,21 @@ function ChristmasPage() {
       return;
     }
 
+    const startTime = normalizeTimeInput(form.startTime);
+    const endTime = normalizeTimeInput(form.endTime);
+    if (!startTime || !endTime) {
+      toast('Enter a start time and an end time', 'error');
+      return;
+    }
+
     setSaving(true);
 
     try {
       const payload = {
         ...form,
         advancePriceCents,
+        startTime,
+        endTime,
         date: dateInput ? `${dateInput}T12:00:00.000Z` : undefined,
       };
 
@@ -155,6 +176,8 @@ function ChristmasPage() {
         title: updated.christmasParty.title,
         note: updated.christmasParty.note,
         advancePriceCents: cents,
+        startTime: normalizeTimeInput(updated.christmasParty.startTime ?? '') ?? startTime,
+        endTime: normalizeTimeInput(updated.christmasParty.endTime ?? '') ?? endTime,
       });
       setDateInput(toDateInputValue(updated.christmasParty.date));
       setPriceInput(centsToPriceInput(cents));
@@ -210,6 +233,35 @@ function ChristmasPage() {
                 onChange={(e) => setDateInput(e.target.value)}
               />
               <p className={styles.daysAway}>{getDaysAwayLabel(dateInput)}</p>
+            </div>
+
+            <div className={styles.timeRow}>
+              <div>
+                <label className={formStyles.fieldLabel} htmlFor="christmas-start">
+                  Start time
+                </label>
+                <input
+                  id="christmas-start"
+                  type="time"
+                  className={formStyles.input}
+                  value={form.startTime}
+                  onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className={formStyles.fieldLabel} htmlFor="christmas-end">
+                  End time
+                </label>
+                <input
+                  id="christmas-end"
+                  type="time"
+                  className={formStyles.input}
+                  value={form.endTime}
+                  onChange={(e) => setForm({ ...form, endTime: e.target.value })}
+                  required
+                />
+              </div>
             </div>
 
             <div>

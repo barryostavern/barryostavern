@@ -1,4 +1,8 @@
-import { DEFAULT_ADVANCE_PRICE_CENTS } from '../constants/tickets';
+import {
+  DEFAULT_ADVANCE_PRICE_CENTS,
+  DEFAULT_PARTY_END_TIME,
+  DEFAULT_PARTY_START_TIME,
+} from '../constants/tickets';
 import { SiteSettings } from '../models';
 
 export async function ensureSettings(): Promise<void> {
@@ -26,5 +30,27 @@ export async function ensureSettings(): Promise<void> {
       ],
     },
     { $set: { 'christmasParty.advancePriceCents': DEFAULT_ADVANCE_PRICE_CENTS } }
+  );
+
+  await SiteSettings.updateMany(
+    {
+      $or: [
+        { 'christmasParty.startTime': { $exists: false } },
+        { 'christmasParty.startTime': null },
+        { 'christmasParty.startTime': '' },
+      ],
+    },
+    { $set: { 'christmasParty.startTime': DEFAULT_PARTY_START_TIME } }
+  );
+
+  await SiteSettings.updateMany(
+    {
+      $or: [
+        { 'christmasParty.endTime': { $exists: false } },
+        { 'christmasParty.endTime': null },
+        { 'christmasParty.endTime': '' },
+      ],
+    },
+    { $set: { 'christmasParty.endTime': DEFAULT_PARTY_END_TIME } }
   );
 }

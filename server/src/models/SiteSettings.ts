@@ -12,6 +12,8 @@ export interface ISiteSettings extends Document {
     date?: Date;
     note: string;
     advancePriceCents?: number;
+    startTime?: string;
+    endTime?: string;
   };
   hero: {
     videoUrl?: string;
@@ -43,6 +45,8 @@ const SiteSettingsSchema = new Schema<ISiteSettings>(
       date: { type: Date },
       note: { type: String, default: '' },
       advancePriceCents: { type: Number, default: 1500, min: 100, max: 50000 },
+      startTime: { type: String, default: '19:00' },
+      endTime: { type: String, default: '23:30' },
     },
     hero: {
       videoUrl: String,

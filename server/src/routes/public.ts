@@ -1,5 +1,10 @@
 import { Router, Response } from 'express';
-import { getAdvancePriceCents } from '../constants/tickets';
+import {
+  DEFAULT_PARTY_END_TIME,
+  DEFAULT_PARTY_START_TIME,
+  getAdvancePriceCents,
+  getPartyTime,
+} from '../constants/tickets';
 import { Event, SiteSettings, Submission } from '../models';
 import type { ISiteSettings } from '../models/SiteSettings';
 import { asyncHandler, createError } from '../middleware/errorHandler';
@@ -27,6 +32,8 @@ function toPublicSiteSettings(doc: ISiteSettings) {
       date: doc.christmasParty.date,
       note: doc.christmasParty.note,
       advancePriceCents: getAdvancePriceCents(doc.christmasParty.advancePriceCents),
+      startTime: getPartyTime(doc.christmasParty.startTime, DEFAULT_PARTY_START_TIME),
+      endTime: getPartyTime(doc.christmasParty.endTime, DEFAULT_PARTY_END_TIME),
       paypalClientId: getPayPalClientId(),
     },
     hero: {

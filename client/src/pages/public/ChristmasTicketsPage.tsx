@@ -5,6 +5,7 @@ import Nav from '../../components/public/Nav';
 import PayPalTicketButton from '../../components/public/PayPalTicketButton';
 import ShamrockIcon from '../../components/shared/ShamrockIcon';
 import { BRAND_ASSETS } from '../../constants/brandAssets';
+import { getCalendarDateParts, TAVERN_TIME_ZONE } from '../../constants/eventSchedule';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
 import homeStyles from './HomePage.module.css';
 import styles from './ChristmasTicketsPage.module.css';
@@ -12,8 +13,6 @@ import styles from './ChristmasTicketsPage.module.css';
 type TicketOption = 'advance' | 'dayOf';
 
 const DAY_OF_PRICE = 20;
-const DOORS_TIME = '7:00 PM';
-const MUSIC_TIME = '8:30 PM';
 const BAND_NAME = "Matt Wallace and the Barry O's";
 const DEFAULT_DESCRIPTION =
   "Barry O's biggest party of the year! Join us for a night of holiday cheer, great music, cold drinks and good times with friends.";
@@ -29,6 +28,15 @@ function formatCents(cents: number): string {
 function formatSavings(cents: number): string {
   if (cents % 100 === 0) return String(cents / 100);
   return (cents / 100).toFixed(2);
+}
+
+function isPartyDay(dateStr?: string): boolean {
+  if (!dateStr) return false;
+
+  const party = getCalendarDateParts(dateStr);
+  const today = getCalendarDateParts(new Date());
+
+  return party.year === today.year && party.month === today.month && party.day === today.day;
 }
 
 function formatPartyDateLong(dateStr?: string): string | null {
@@ -57,14 +65,68 @@ function formatPartyDateUpper(dateStr?: string): string | null {
   return formatted ? formatted.toUpperCase() : null;
 }
 
-function buildGoogleCalendarUrl(title: string, dateStr?: string): string | null {
+function formatPartyTime(value?: string): string | null {
+  if (!value) return null;
+
+  const match = value.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if (!match) return null;
+
+  const hour = Number(match[1]);
+  const minute = match[2];
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+
+  return `${hour12}:${minute} ${period}`;
+}
+
+function tavernInstant(year: number, month: number, day: number, time: string): Date | null {
+  const match = time.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if (!match) return null;
+
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: TAVERN_TIME_ZONE,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(utcGuess);
+
+  const pick = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((part) => part.type === type)?.value);
+  const zonedAsUtc = Date.UTC(
+    pick('year'),
+    pick('month') - 1,
+    pick('day'),
+    pick('hour'),
+    pick('minute'),
+    pick('second')
+  );
+
+  return new Date(utcGuess.getTime() - (zonedAsUtc - utcGuess.getTime()));
+}
+
+function buildGoogleCalendarUrl(
+  title: string,
+  dateStr: string | undefined,
+  startTime: string,
+  endTime: string
+): string | null {
   if (!dateStr) return null;
 
-  const start = new Date(dateStr);
-  start.setHours(19, 0, 0, 0);
+  const { year, month, day } = getCalendarDateParts(dateStr);
+  const start = tavernInstant(year, month, day, startTime);
+  let end = tavernInstant(year, month, day, endTime);
+  if (!start || !end) return null;
 
-  const end = new Date(start);
-  end.setHours(23, 30, 0, 0);
+  if (end.getTime() <= start.getTime()) {
+    end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+  }
 
   const format = (value: Date) =>
     value
@@ -170,13 +232,22 @@ function ChristmasTicketsPage() {
   const { christmasParty, contact, hero } = settings;
   const formattedDateUpper = formatPartyDateUpper(christmasParty.date);
   const formattedDateShort = formatPartyDateShort(christmasParty.date);
-  const calendarUrl = buildGoogleCalendarUrl(christmasParty.title, christmasParty.date);
+  const calendarUrl = buildGoogleCalendarUrl(
+    christmasParty.title,
+    christmasParty.date,
+    christmasParty.startTime || '19:00',
+    christmasParty.endTime || '23:30'
+  );
   const description = christmasParty.note?.trim() || DEFAULT_DESCRIPTION;
+  const startLabel = formatPartyTime(christmasParty.startTime) ?? '7:00 PM';
+  const endLabel = formatPartyTime(christmasParty.endTime) ?? '11:30 PM';
   const advancePriceCents = christmasParty.advancePriceCents ?? 1500;
   const paypalClientId = christmasParty.paypalClientId?.trim() ?? '';
+  const showDayOfPrice = isPartyDay(christmasParty.date);
+  const selectedOption: TicketOption = showDayOfPrice ? ticketOption : 'advance';
   const savingsCents = DAY_OF_PRICE * 100 - advancePriceCents;
   const totalCents = advancePriceCents * quantity;
-  const canCheckout = ticketOption === 'advance' && Boolean(paypalClientId);
+  const canCheckout = selectedOption === 'advance' && Boolean(paypalClientId);
 
   return (
     <>
@@ -258,26 +329,30 @@ function ChristmasTicketsPage() {
               <ShamrockIcon className={styles.ticketCardShamrock} />
 
               <fieldset className={styles.ticketOptions}>
-                <legend className="sr-only">Choose a ticket type</legend>
+                <legend className="sr-only">
+                  {showDayOfPrice ? 'Choose a ticket type' : 'Advance ticket'}
+                </legend>
 
                 <label
                   className={
-                    ticketOption === 'advance'
+                    selectedOption === 'advance'
                       ? `${styles.ticketOption} ${styles.ticketOptionSelected}`
                       : styles.ticketOption
                   }
                 >
-                  <input
-                    type="radio"
-                    name="ticketType"
-                    value="advance"
-                    checked={ticketOption === 'advance'}
-                    onChange={() => {
-                      setTicketOption('advance');
-                      setCheckoutMessage('');
-                    }}
-                    className={styles.ticketRadio}
-                  />
+                  {showDayOfPrice ? (
+                    <input
+                      type="radio"
+                      name="ticketType"
+                      value="advance"
+                      checked={selectedOption === 'advance'}
+                      onChange={() => {
+                        setTicketOption('advance');
+                        setCheckoutMessage('');
+                      }}
+                      className={styles.ticketRadio}
+                    />
+                  ) : null}
                   <span className={styles.ticketOptionBody}>
                     <span className={styles.ticketOptionTop}>
                       <span className={styles.ticketOptionName}>Advance Ticket</span>
@@ -286,7 +361,7 @@ function ChristmasTicketsPage() {
                       </span>
                     </span>
                     <span className={styles.ticketOptionSub}>General Admission</span>
-                    {savingsCents > 0 ? (
+                    {showDayOfPrice && savingsCents > 0 ? (
                       <span className={styles.ticketOptionHighlight}>
                         Recommended: Save ${formatSavings(savingsCents)}!
                       </span>
@@ -294,35 +369,39 @@ function ChristmasTicketsPage() {
                   </span>
                 </label>
 
-                <label
-                  className={
-                    ticketOption === 'dayOf'
-                      ? `${styles.ticketOption} ${styles.ticketOptionSelected}`
-                      : styles.ticketOption
-                  }
-                >
-                  <input
-                    type="radio"
-                    name="ticketType"
-                    value="dayOf"
-                    checked={ticketOption === 'dayOf'}
-                    onChange={() => {
-                      setTicketOption('dayOf');
-                      setCheckoutMessage('');
-                    }}
-                    className={styles.ticketRadio}
-                  />
-                  <span className={styles.ticketOptionBody}>
-                    <span className={styles.ticketOptionTop}>
-                      <span className={styles.ticketOptionName}>Day Of Show</span>
-                      <span className={styles.ticketOptionPrice}>${DAY_OF_PRICE.toFixed(2)} at the door</span>
+                {showDayOfPrice ? (
+                  <label
+                    className={
+                      selectedOption === 'dayOf'
+                        ? `${styles.ticketOption} ${styles.ticketOptionSelected}`
+                        : styles.ticketOption
+                    }
+                  >
+                    <input
+                      type="radio"
+                      name="ticketType"
+                      value="dayOf"
+                      checked={selectedOption === 'dayOf'}
+                      onChange={() => {
+                        setTicketOption('dayOf');
+                        setCheckoutMessage('');
+                      }}
+                      className={styles.ticketRadio}
+                    />
+                    <span className={styles.ticketOptionBody}>
+                      <span className={styles.ticketOptionTop}>
+                        <span className={styles.ticketOptionName}>Day Of Show</span>
+                        <span className={styles.ticketOptionPrice}>
+                          ${DAY_OF_PRICE.toFixed(2)} at the door
+                        </span>
+                      </span>
+                      <span className={styles.ticketOptionSub}>At The Door</span>
                     </span>
-                    <span className={styles.ticketOptionSub}>At The Door</span>
-                  </span>
-                </label>
+                  </label>
+                ) : null}
               </fieldset>
 
-              {ticketOption === 'advance' ? (
+              {selectedOption === 'advance' ? (
                 <div className={styles.quantity}>
                   <span className={styles.quantityLabel} id="ticket-quantity-label">
                     How many
@@ -369,7 +448,7 @@ function ChristmasTicketsPage() {
                 </>
               ) : (
                 <button type="button" className={`btn btn-green ${styles.buyBtn}`} disabled>
-                  {ticketOption === 'dayOf'
+                  {selectedOption === 'dayOf'
                     ? `Pay at the Door — $${DAY_OF_PRICE.toFixed(2)}`
                     : 'Ticket checkout coming soon'}
                 </button>
@@ -410,8 +489,8 @@ function ChristmasTicketsPage() {
               <ClockIcon />
               <div>
                 <p className={styles.logisticsLabel}>Time</p>
-                <p className={styles.logisticsValue}>Doors at {DOORS_TIME}</p>
-                <p className={styles.logisticsValue}>Music starts at {MUSIC_TIME}</p>
+                <p className={styles.logisticsValue}>Starts at {startLabel}</p>
+                <p className={styles.logisticsValue}>Ends at {endLabel}</p>
               </div>
             </div>
 

@@ -53,6 +53,14 @@ function ChristmasCTA({ christmasParty, belowHero = false }: ChristmasCTAProps) 
           )}
 
           <div className={styles.center}>
+            {posterUrl ? (
+              <img
+                src={BRAND_ASSETS.christmasParty}
+                alt=""
+                aria-hidden="true"
+                className={styles.logoMark}
+              />
+            ) : null}
             <h2 className={styles.title}>{christmasParty.title}</h2>
             {formattedDate ? <p className={styles.date}>{formattedDate}</p> : null}
             {timeRange ? <p className={styles.time}>{timeRange}</p> : null}

@@ -265,6 +265,14 @@ function ChristmasTicketsPage() {
             </div>
 
             <div className={styles.heroContent}>
+              {posterUrl ? (
+                <img
+                  src={BRAND_ASSETS.christmasParty}
+                  alt=""
+                  aria-hidden="true"
+                  className={styles.logoMark}
+                />
+              ) : null}
               <h1 id="christmas-party-title" className={styles.heroTitle}>
                 {christmasParty.title}
               </h1>
@@ -305,6 +313,15 @@ function ChristmasTicketsPage() {
                   Add to Calendar
                 </a>
               ) : null}
+            </div>
+
+            <div className={styles.ticketAccentSlot}>
+              <img
+                src={BRAND_ASSETS.christmasTickets}
+                alt=""
+                aria-hidden="true"
+                className={styles.ticketAccent}
+              />
             </div>
 
             <div className={styles.ticketCard} aria-labelledby="ticket-card-heading">

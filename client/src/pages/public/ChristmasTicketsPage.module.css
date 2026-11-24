@@ -70,6 +70,7 @@
 .heroArt {
   display: flex;
   justify-content: center;
+  min-width: 0;
 }
 
 .ticketArt {
@@ -137,11 +138,11 @@
 }
 
 .heroInnerWithPoster {
-  grid-template-columns: minmax(12rem, 24rem) minmax(0, 1fr);
+  grid-template-columns: min(36rem, 52%) minmax(0, 1fr);
 }
 
 .posterArt {
-  width: min(24rem, 100%);
+  width: 100%;
   height: auto;
   border-radius: 8px;
 }

@@ -2,6 +2,10 @@
   padding: 0 0 64px;
 }
 
+.sectionBelowHero {
+  padding-top: 1.25rem;
+}
+
 .banner {
   position: relative;
   display: grid;
@@ -98,12 +102,13 @@
 }
 
 .bannerWithPoster {
-  grid-template-columns: minmax(12rem, 22rem) minmax(0, 1fr);
+  grid-template-columns: min(28rem, 46%) minmax(0, 1fr);
 }
 
 .posterWrap {
   position: relative;
   z-index: 1;
+  min-width: 0;
 }
 
 .poster {

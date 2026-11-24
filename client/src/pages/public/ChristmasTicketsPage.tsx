@@ -261,8 +261,6 @@ function ChristmasTicketsPage() {
                 alt={posterUrl ? `${christmasParty.title} poster` : ''}
                 aria-hidden={posterUrl ? undefined : true}
                 className={posterUrl ? styles.posterArt : styles.ticketArt}
-                width={320}
-                height={320}
               />
             </div>
 

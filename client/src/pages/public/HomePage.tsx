@@ -71,7 +71,7 @@ function HomePage() {
         />
         <AnnouncementBar {...settings.announcement} />
         {settings.christmasParty.calloutPlacement === 'belowHero' ? (
-          <ChristmasCTA christmasParty={settings.christmasParty} />
+          <ChristmasCTA christmasParty={settings.christmasParty} belowHero />
         ) : null}
         <EventsSection instagramHandle={settings.instagram?.handle} />
         {settings.christmasParty.calloutPlacement === 'belowHero' ? null : (

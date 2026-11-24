@@ -7,6 +7,7 @@ import styles from './ChristmasCTA.module.css';
 
 export interface ChristmasCTAProps {
   christmasParty: SiteSettings['christmasParty'];
+  belowHero?: boolean;
 }
 
 function formatPartyDate(dateStr?: string): string | null {
@@ -20,7 +21,7 @@ function formatPartyDate(dateStr?: string): string | null {
   });
 }
 
-function ChristmasCTA({ christmasParty }: ChristmasCTAProps) {
+function ChristmasCTA({ christmasParty, belowHero = false }: ChristmasCTAProps) {
   if (!christmasParty.enabled) return null;
 
   const formattedDate = formatPartyDate(christmasParty.date);
@@ -28,7 +29,10 @@ function ChristmasCTA({ christmasParty }: ChristmasCTAProps) {
   const posterUrl = christmasParty.posterUrl?.trim();
 
   return (
-    <section id="christmas" className={styles.section}>
+    <section
+      id="christmas"
+      className={belowHero ? `${styles.section} ${styles.sectionBelowHero}` : styles.section}
+    >
       <div className="wrap">
         <div className={posterUrl ? `${styles.banner} ${styles.bannerWithPoster}` : styles.banner}>
           {posterUrl ? (

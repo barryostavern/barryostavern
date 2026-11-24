@@ -5,6 +5,8 @@ import Nav from '../../components/public/Nav';
 import PayPalTicketButton from '../../components/public/PayPalTicketButton';
 import ShamrockIcon from '../../components/shared/ShamrockIcon';
 import { BRAND_ASSETS } from '../../constants/brandAssets';
+import RichNote from '../../components/shared/RichNote';
+import { formatPartyTimeRange, richNoteHasText } from '../../utils/partyDisplay';
 import { getCalendarDateParts, TAVERN_TIME_ZONE } from '../../constants/eventSchedule';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
 import homeStyles from './HomePage.module.css';
@@ -63,20 +65,6 @@ function formatPartyDateShort(dateStr?: string): { weekday: string; rest: string
 function formatPartyDateUpper(dateStr?: string): string | null {
   const formatted = formatPartyDateLong(dateStr);
   return formatted ? formatted.toUpperCase() : null;
-}
-
-function formatPartyTime(value?: string): string | null {
-  if (!value) return null;
-
-  const match = value.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
-  if (!match) return null;
-
-  const hour = Number(match[1]);
-  const minute = match[2];
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const hour12 = hour % 12 || 12;
-
-  return `${hour12}:${minute} ${period}`;
 }
 
 function tavernInstant(year: number, month: number, day: number, time: string): Date | null {
@@ -238,9 +226,11 @@ function ChristmasTicketsPage() {
     christmasParty.startTime || '19:00',
     christmasParty.endTime || '23:30'
   );
-  const description = christmasParty.note?.trim() || DEFAULT_DESCRIPTION;
-  const startLabel = formatPartyTime(christmasParty.startTime) ?? '7:00 PM';
-  const endLabel = formatPartyTime(christmasParty.endTime) ?? '11:30 PM';
+  const description = richNoteHasText(christmasParty.note)
+    ? christmasParty.note
+    : DEFAULT_DESCRIPTION;
+  const timeRange = formatPartyTimeRange(christmasParty.startTime, christmasParty.endTime);
+  const posterUrl = christmasParty.posterUrl?.trim();
   const advancePriceCents = christmasParty.advancePriceCents ?? 1500;
   const paypalClientId = christmasParty.paypalClientId?.trim() ?? '';
   const showDayOfPrice = isPartyDay(christmasParty.date);
@@ -264,13 +254,13 @@ function ChristmasTicketsPage() {
           ) : null}
           <div className={styles.heroOverlay} aria-hidden="true" />
 
-          <div className={`wrap ${styles.heroInner}`}>
+          <div className={`wrap ${posterUrl ? `${styles.heroInner} ${styles.heroInnerWithPoster}` : styles.heroInner}`}>
             <div className={styles.heroArt}>
               <img
-                src={BRAND_ASSETS.christmasParty}
-                alt=""
-                aria-hidden="true"
-                className={styles.ticketArt}
+                src={posterUrl || BRAND_ASSETS.christmasParty}
+                alt={posterUrl ? `${christmasParty.title} poster` : ''}
+                aria-hidden={posterUrl ? undefined : true}
+                className={posterUrl ? styles.posterArt : styles.ticketArt}
                 width={320}
                 height={320}
               />
@@ -283,7 +273,8 @@ function ChristmasTicketsPage() {
               {formattedDateUpper ? (
                 <p className={styles.heroDate}>{formattedDateUpper}</p>
               ) : null}
-              <p className={styles.heroDescription}>{description}</p>
+              {timeRange ? <p className={styles.heroTime}>{timeRange}</p> : null}
+              <RichNote value={description} className={styles.heroDescription} />
             </div>
           </div>
         </section>
@@ -489,8 +480,7 @@ function ChristmasTicketsPage() {
               <ClockIcon />
               <div>
                 <p className={styles.logisticsLabel}>Time</p>
-                <p className={styles.logisticsValue}>Starts at {startLabel}</p>
-                <p className={styles.logisticsValue}>Ends at {endLabel}</p>
+                <p className={styles.logisticsValue}>{timeRange ?? 'Time TBA'}</p>
               </div>
             </div>
 

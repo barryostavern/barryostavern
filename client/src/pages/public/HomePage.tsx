@@ -70,8 +70,13 @@ function HomePage() {
           subheadline={settings.hero.subheadline}
         />
         <AnnouncementBar {...settings.announcement} />
+        {settings.christmasParty.calloutPlacement === 'belowHero' ? (
+          <ChristmasCTA christmasParty={settings.christmasParty} />
+        ) : null}
         <EventsSection instagramHandle={settings.instagram?.handle} />
-        <ChristmasCTA christmasParty={settings.christmasParty} />
+        {settings.christmasParty.calloutPlacement === 'belowHero' ? null : (
+          <ChristmasCTA christmasParty={settings.christmasParty} />
+        )}
         <Gallery
           instagramHandle={settings.instagram?.handle}
           enabled={settings.instagram?.showApprovedInGallery !== false}

@@ -30,6 +30,8 @@ export interface SiteSettings {
     advancePriceCents?: number;
     startTime?: string;
     endTime?: string;
+    calloutPlacement?: 'standard' | 'belowHero';
+    posterUrl?: string;
     paypalClientId?: string | null;
   };
   hero: {

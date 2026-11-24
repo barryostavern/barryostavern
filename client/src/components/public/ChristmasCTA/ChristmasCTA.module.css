@@ -65,12 +65,52 @@
 }
 
 .date,
+.time,
 .note {
   font-family: 'Barlow', sans-serif;
   font-size: 1rem;
   line-height: 1.45;
   color: var(--text);
   margin: 0;
+}
+
+.time {
+  font-family: 'Oswald', sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.note p {
+  margin: 0;
+}
+
+.note p + p {
+  margin-top: 0.35rem;
+}
+
+.note strong {
+  font-weight: 700;
+}
+
+.note em {
+  font-style: italic;
+}
+
+.bannerWithPoster {
+  grid-template-columns: minmax(12rem, 22rem) minmax(0, 1fr);
+}
+
+.posterWrap {
+  position: relative;
+  z-index: 1;
+}
+
+.poster {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
 }
 
 .ticketBtn {
@@ -110,6 +150,10 @@
   .ticketArt {
     width: min(14rem, 80vw);
   }
+
+  .bannerWithPoster {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 560px) {
@@ -119,7 +163,12 @@
   }
 
   .date,
+  .time,
   .note {
     font-size: 0.9375rem;
+  }
+
+  .bannerWithPoster {
+    grid-template-columns: 1fr;
   }
 }

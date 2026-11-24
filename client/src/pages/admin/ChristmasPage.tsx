@@ -1,8 +1,11 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import ChristmasCTA from '../../components/public/ChristmasCTA';
+import NoteEditor from '../../components/admin/NoteEditor';
 import Toggle from '../../components/admin/shared/Toggle';
 import { useToast } from '../../components/admin/shared/Toast';
 import { useAdminApi } from '../../hooks/useAdminApi';
+import { API_BASE_URL } from '../../config/api';
 import type { AdminTicketOrder, SiteSettings } from '../../types';
 import formStyles from '../../components/admin/shared/adminForm.module.css';
 import styles from './ChristmasPage.module.css';
@@ -14,6 +17,7 @@ type ChristmasForm = {
   advancePriceCents: number;
   startTime: string;
   endTime: string;
+  calloutPlacement: 'standard' | 'belowHero';
 };
 
 interface TicketSales {
@@ -77,6 +81,7 @@ function getDaysAwayLabel(dateStr: string): string {
 
 function ChristmasPage() {
   const { adminFetch } = useAdminApi();
+  const { getAccessTokenSilently } = useAuth0();
   const { toast } = useToast();
   const [form, setForm] = useState<ChristmasForm>({
     enabled: false,
@@ -85,9 +90,12 @@ function ChristmasPage() {
     advancePriceCents: 1500,
     startTime: '19:00',
     endTime: '23:30',
+    calloutPlacement: 'standard',
   });
   const [dateInput, setDateInput] = useState('');
   const [priceInput, setPriceInput] = useState('15.00');
+  const [posterUrl, setPosterUrl] = useState('');
+  const [uploadingPoster, setUploadingPoster] = useState(false);
   const [sales, setSales] = useState<TicketSales>({ orders: [], ticketsSold: 0, orderCount: 0 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -106,9 +114,12 @@ function ChristmasPage() {
           advancePriceCents: cents,
           startTime: normalizeTimeInput(settings.christmasParty.startTime ?? '') ?? '19:00',
           endTime: normalizeTimeInput(settings.christmasParty.endTime ?? '') ?? '23:30',
+          calloutPlacement:
+            settings.christmasParty.calloutPlacement === 'belowHero' ? 'belowHero' : 'standard',
         });
         setDateInput(toDateInputValue(settings.christmasParty.date));
         setPriceInput(centsToPriceInput(cents));
+        setPosterUrl(settings.christmasParty.posterUrl ?? '');
       })
       .catch(() => {
         if (active) toast('Could not load Christmas settings', 'error');
@@ -134,8 +145,9 @@ function ChristmasPage() {
     () => ({
       ...form,
       date: dateInput ? `${dateInput}T12:00:00.000Z` : undefined,
+      posterUrl,
     }),
-    [form, dateInput]
+    [form, dateInput, posterUrl]
   );
 
   const handleSave = async (event: FormEvent) => {
@@ -178,6 +190,8 @@ function ChristmasPage() {
         advancePriceCents: cents,
         startTime: normalizeTimeInput(updated.christmasParty.startTime ?? '') ?? startTime,
         endTime: normalizeTimeInput(updated.christmasParty.endTime ?? '') ?? endTime,
+        calloutPlacement:
+          updated.christmasParty.calloutPlacement === 'belowHero' ? 'belowHero' : 'standard',
       });
       setDateInput(toDateInputValue(updated.christmasParty.date));
       setPriceInput(centsToPriceInput(cents));
@@ -186,6 +200,57 @@ function ChristmasPage() {
       toast(error instanceof Error ? error.message : 'Could not save Christmas settings', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const uploadPoster = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast('Use a JPEG, PNG, or WebP image', 'error');
+      return;
+    }
+
+    setUploadingPoster(true);
+
+    try {
+      const token = await getAccessTokenSilently();
+      const body = new FormData();
+      body.append('poster', file);
+      const response = await fetch(`${API_BASE_URL}/admin/media/christmas-poster`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error || 'Could not upload the poster');
+      }
+
+      const json = (await response.json()) as { data: { posterUrl: string } };
+      setPosterUrl(json.data.posterUrl);
+      toast('Poster uploaded', 'success');
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Could not upload the poster', 'error');
+    } finally {
+      setUploadingPoster(false);
+    }
+  };
+
+  const removePoster = async () => {
+    setUploadingPoster(true);
+
+    try {
+      await adminFetch<{ posterUrl: string }>('/admin/media/christmas-poster', { method: 'DELETE' });
+      setPosterUrl('');
+      toast('Poster removed', 'success');
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Could not remove the poster', 'error');
+    } finally {
+      setUploadingPoster(false);
     }
   };
 
@@ -264,18 +329,34 @@ function ChristmasPage() {
               </div>
             </div>
 
-            <div>
-              <label className={formStyles.fieldLabel} htmlFor="christmas-note">
-                Note
+            <fieldset className={styles.placement}>
+              <legend className={formStyles.fieldLabel}>Homepage spot</legend>
+              <label className={styles.placementOption}>
+                <input
+                  type="radio"
+                  name="calloutPlacement"
+                  checked={form.calloutPlacement === 'standard'}
+                  onChange={() => setForm({ ...form, calloutPlacement: 'standard' })}
+                />
+                After the events list
               </label>
-              <textarea
-                id="christmas-note"
-                className={formStyles.textarea}
-                rows={3}
-                value={form.note}
-                onChange={(e) => setForm({ ...form, note: e.target.value })}
-              />
-            </div>
+              <label className={styles.placementOption}>
+                <input
+                  type="radio"
+                  name="calloutPlacement"
+                  checked={form.calloutPlacement === 'belowHero'}
+                  onChange={() => setForm({ ...form, calloutPlacement: 'belowHero' })}
+                />
+                Below the hero video
+              </label>
+            </fieldset>
+
+            <NoteEditor
+              id="christmas-note"
+              label="Event details"
+              value={form.note}
+              onChange={(note) => setForm({ ...form, note })}
+            />
 
             <div>
               <label className={formStyles.fieldLabel} htmlFor="christmas-price">
@@ -301,6 +382,40 @@ function ChristmasPage() {
               {saving ? 'Saving…' : 'Save changes'}
             </button>
           </form>
+
+          <div className={styles.posterBlock}>
+            <p className={formStyles.fieldLabel}>Poster</p>
+            {posterUrl ? (
+              <img src={posterUrl} alt="Christmas party poster" className={styles.posterPreview} />
+            ) : (
+              <p className={styles.fieldHint}>
+                No poster yet. The decorative artwork shows until you upload one.
+              </p>
+            )}
+            <div className={styles.posterActions}>
+              <label className={`btn btn-green ${styles.posterUpload}`}>
+                {uploadingPoster ? 'Working…' : 'Upload poster'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={uploadPoster}
+                  disabled={uploadingPoster}
+                  hidden
+                />
+              </label>
+              {posterUrl ? (
+                <button
+                  type="button"
+                  className={formStyles.btnDanger}
+                  onClick={removePoster}
+                  disabled={uploadingPoster}
+                >
+                  Remove poster
+                </button>
+              ) : null}
+            </div>
+            <p className={styles.fieldHint}>JPEG, PNG, or WebP. Up to 8 MB.</p>
+          </div>
         </section>
 
         <section className={`${formStyles.panel} ${styles.previewPanel}`}>

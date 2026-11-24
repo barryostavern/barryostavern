@@ -20,7 +20,9 @@ import { Event, SiteSettings, Submission, TicketOrder, User } from '../models';
 import type { ITicketOrder } from '../models/TicketOrder';
 import type { ISiteSettings } from '../models/SiteSettings';
 import { uploadHeroVideo } from '../services/storage';
-import { destroyImage, moveToGallery } from '../services/imagePipeline';
+import { destroyImage, moveToGallery, uploadChristmasPoster } from '../services/imagePipeline';
+import { uploadMiddleware } from '../middleware/upload';
+import { sanitizeNote } from '../utils/sanitizeNote';
 import type { ISubmission } from '../models/Submission';
 
 const router = Router();
@@ -95,8 +97,26 @@ function mergeSiteSettings(
       }
     }
 
+    if (typeof christmasParty.note === 'string') {
+      try {
+        christmasParty.note = sanitizeNote(christmasParty.note);
+      } catch (error) {
+        throw createError(error instanceof Error ? error.message : 'Invalid event details', 400);
+      }
+    }
+
+    if (
+      christmasParty.calloutPlacement !== undefined &&
+      christmasParty.calloutPlacement !== 'standard' &&
+      christmasParty.calloutPlacement !== 'belowHero'
+    ) {
+      throw createError('Choose a homepage spot', 400);
+    }
+
     delete christmasParty.ticketUrl;
     delete christmasParty.paypalClientId;
+    delete christmasParty.posterUrl;
+    delete christmasParty.posterPublicId;
 
     if (christmasParty.startTime !== undefined) {
       const startTime = getPartyTime(christmasParty.startTime, '');
@@ -545,6 +565,64 @@ router.get(
         orderCount: totals.orders,
       },
     });
+  })
+);
+
+router.post(
+  '/media/christmas-poster',
+  (req, res, next) => {
+    uploadMiddleware.single('poster')(req, res, (err: unknown) => {
+      if (err instanceof Error) {
+        next(createError(err.message, 400));
+        return;
+      }
+      if (err) {
+        next(err);
+        return;
+      }
+      next();
+    });
+  },
+  asyncHandler(async (req, res: Response) => {
+    if (!req.file) {
+      throw createError('No poster image provided', 400);
+    }
+
+    if (!process.env.CLOUDINARY_URL) {
+      throw createError('Cloudinary is not configured', 500);
+    }
+
+    const uploaded = await uploadChristmasPoster(req.file.buffer);
+    const settings = await getSettingsDocument();
+    const previousId = settings.christmasParty.posterPublicId;
+
+    settings.christmasParty.posterUrl = uploaded.imageUrl;
+    settings.christmasParty.posterPublicId = uploaded.publicId;
+    await settings.save();
+
+    if (previousId) {
+      await destroyImage(previousId).catch(() => undefined);
+    }
+
+    res.json({ data: { posterUrl: uploaded.imageUrl } });
+  })
+);
+
+router.delete(
+  '/media/christmas-poster',
+  asyncHandler(async (_req, res: Response) => {
+    const settings = await getSettingsDocument();
+    const previousId = settings.christmasParty.posterPublicId;
+
+    settings.christmasParty.posterUrl = '';
+    settings.christmasParty.posterPublicId = '';
+    await settings.save();
+
+    if (previousId) {
+      await destroyImage(previousId).catch(() => undefined);
+    }
+
+    res.json({ data: { posterUrl: '' } });
   })
 );
 

@@ -14,6 +14,9 @@ export interface ISiteSettings extends Document {
     advancePriceCents?: number;
     startTime?: string;
     endTime?: string;
+    calloutPlacement?: 'standard' | 'belowHero';
+    posterUrl?: string;
+    posterPublicId?: string;
   };
   hero: {
     videoUrl?: string;
@@ -47,6 +50,13 @@ const SiteSettingsSchema = new Schema<ISiteSettings>(
       advancePriceCents: { type: Number, default: 1500, min: 100, max: 50000 },
       startTime: { type: String, default: '19:00' },
       endTime: { type: String, default: '23:30' },
+      calloutPlacement: {
+        type: String,
+        enum: ['standard', 'belowHero'],
+        default: 'standard',
+      },
+      posterUrl: { type: String, default: '' },
+      posterPublicId: { type: String, default: '' },
     },
     hero: {
       videoUrl: String,

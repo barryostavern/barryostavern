@@ -34,6 +34,8 @@ function toPublicSiteSettings(doc: ISiteSettings) {
       advancePriceCents: getAdvancePriceCents(doc.christmasParty.advancePriceCents),
       startTime: getPartyTime(doc.christmasParty.startTime, DEFAULT_PARTY_START_TIME),
       endTime: getPartyTime(doc.christmasParty.endTime, DEFAULT_PARTY_END_TIME),
+      calloutPlacement: doc.christmasParty.calloutPlacement === 'belowHero' ? 'belowHero' : 'standard',
+      posterUrl: doc.christmasParty.posterUrl || undefined,
       paypalClientId: getPayPalClientId(),
     },
     hero: {

@@ -106,3 +106,25 @@ export async function destroyImage(cloudinaryPublicId: string): Promise<void> {
     /* ignore if missing */
   });
 }
+
+export async function uploadChristmasPoster(
+  fileBuffer: Buffer
+): Promise<{ imageUrl: string; publicId: string }> {
+  if (!process.env.CLOUDINARY_URL) {
+    throw new Error('Cloudinary is not configured');
+  }
+
+  const cleanBuffer = await sharp(fileBuffer)
+    .rotate()
+    .resize({ width: 1800, height: 2400, fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 90 })
+    .toBuffer();
+
+  const { secure_url: imageUrl, public_id: publicId } = await uploadStream(
+    bufferToStream(cleanBuffer),
+    'barryos/christmas',
+    `poster_${Date.now()}`
+  );
+
+  return { imageUrl, publicId };
+}
